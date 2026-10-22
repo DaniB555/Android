@@ -4,22 +4,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.*
-import androidx.navigation.toRoute
 import com.example.loginpage.*
 import com.example.loginpage.ui.screens.*
+import com.example.loginpage.utils.SessionManager
 
 private data class BottomNavItem(val route: Any, val label: String)
 
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager.getInstance(context) }
+
+    val startDestination = remember {
+        if (sessionManager.isLoggedIn) MainGraph else Login
+    }
+
     val bottomNavItems = listOf(
         BottomNavItem(route = Home, label = "Home"),
-        BottomNavItem(route = Profile(), label = "Profile"),
+        BottomNavItem(route = Profile, label = "Profile"),
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -54,25 +63,46 @@ fun AppNavGraph() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Login,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable<Login> {
-                LoginScreen {
-                    navController.navigate(MainGraph) {
-                        popUpTo<Login> { inclusive = true }
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate(MainGraph) {
+                            popUpTo<Login> { inclusive = true }
+                        }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(Register)
                     }
-                }
+                )
+            }
+            composable<Register> {
+                RegisterScreen(
+                    onRegisterSuccess = {
+                        navController.navigate(MainGraph) {
+                            popUpTo<Login> { inclusive = true }
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.popBackStack()
+                    }
+                )
             }
             navigation<MainGraph>(startDestination = Home) {
                 composable<Home> {
-                    HomeScreen { userId, userName ->
-                        navController.navigate(Profile(userId, userName))
-                    }
+                    HomeScreen(
+                        onLogout = {
+                            navController.navigate(Login) {
+                                popUpTo<MainGraph> { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
                 }
-                composable<Profile> { backStackEntry ->
-                    val profile: Profile = backStackEntry.toRoute()
-                    ProfileScreen(userId = profile.userId, userName = profile.userName)
+                composable<Profile> {
+                    ProfileScreen()
                 }
             }
         }

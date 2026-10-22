@@ -6,13 +6,13 @@ import kotlinx.serialization.Serializable
 object Login
 
 @Serializable
+object Register
+
+@Serializable
 object MainGraph
 
 @Serializable
 object Home
 
 @Serializable
-data class Profile(
-    val userId: String = "guest",
-    val userName: String = "Guest"
-)
+object Profile
